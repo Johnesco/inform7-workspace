@@ -37,8 +37,9 @@ I7_INTERNAL = _I7_HOME / "Internal"
 NATIVE_GLULXE = TOOLS_DIR / "interpreters" / "glulxe.exe"
 NATIVE_DFROTZ = TOOLS_DIR / "interpreters" / "dfrotz.exe"
 
-# Engine name -> workspace folder name (used by new_project.py)
-ENGINE_DIR_KEYS = {"inform7": "i7", "zmachine": "zmachine"}
+# Engine name -> workspace folder name (used by new_project.py). Z-machine stories
+# live in this workspace too: they use the same Parchment player.
+ENGINE_DIR_KEYS = {"inform7": "i7", "zmachine": "i7"}
 
 
 def engine_dir_key(engine: str) -> str:

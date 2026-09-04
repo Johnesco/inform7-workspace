@@ -1,6 +1,6 @@
 # Inform 7 Game Workspace
 
-This folder holds Inform 7 games. Each subfolder is its own git repo, built and tested here, and published to GitHub Pages through IF Hub. The tooling in `tools/` is self-contained; it does not depend on the hub.
+This folder holds Inform 7 games and Z-machine stories (classic Infocom format, e.g. zork1-v0). Both play through the same Parchment player. Each subfolder is its own git repo, built and tested here, and published to GitHub Pages through IF Hub. The tooling in `tools/` is self-contained; it does not depend on the hub.
 
 ## Authoring
 
@@ -34,6 +34,8 @@ python tools/build.py <game> --force         # overwrite play.html (keep a play-
 ```
 
 `build.py` runs `compile.py` (I7 to I6 to Glulx; a `.gblorb` when `ifhub.conf` says `sound = blorb` or a `Sounds/` folder exists; then `web/setup_web.py` for the Parchment player), then the tests: the walkthrough through `run_walkthrough.py` with the golden seed from `tests/seeds.conf`, `generate-guide.py` for the annotated guide, regtests through `run_tests.py --json` converted to `test-results.json` and rendered to `tests.html` in ifPlayer's format, and any `tests/*.test` files through `python -m ifplayer.cli test`.
+
+**Z-machine stories** (`engine = zmachine` in `ifhub.conf`): `build.py` skips the compiler and tests, copies the Parchment libraries into `lib/parchment/`, encodes the story file named by `binary =` (a `.z3`/`.z5`/`.z8`, or an already encoded `.js` used as-is), and writes `play.html` from the Parchment template. A `play-template.html` in the game folder takes precedence, which keeps a customised player safe under `--force` (zork1-v0 has one; give it a template before forcing).
 
 Individual tools (most take `--config tests/project.conf`): `run_walkthrough.py`, `run_tests.py`, `run_scenarios.py`, `find_seeds.py`, `find_scenario_seeds.py`, `generate-guide.py`, `extract_commands.py` (walkthrough from a transcript or `Test me`), `generate_map.py` (room map from a walkthrough), `explore.py` (tree exploration), `new_project.py` (scaffold a game), `validate_web.py`, `regtest.py` (Plotkin's RegTest), `testing-dashboard.py`.
 
