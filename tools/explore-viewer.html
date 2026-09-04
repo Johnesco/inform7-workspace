@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Explorer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f7f8fa;
+  --bg-hover: #eef2ff;
+  --bg-selected: #dbeafe;
+  --bg-path: #f0fdf4;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #3b82f6;
+  --radius: 6px;
+  --c-frontier: #3b82f6;
+  --c-explored: #22c55e;
+  --c-error: #94a3b8;
+  --c-terminal: #ef4444;
+  --c-loop: #f59e0b;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  overflow: hidden;
+}
+
+/* ---- Header ---- */
+header {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-alt);
+}
+header h1 { font-size: 16px; font-weight: 600; }
+.stats {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.stat-val { font-weight: 600; color: var(--text); }
+
+/* ---- Toolbar ---- */
+.toolbar {
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--bg);
+}
+.filter-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all .15s;
+}
+.filter-btn:hover { background: var(--bg-hover); }
+.filter-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.filter-btn.active .dot { border: 1px solid rgba(255,255,255,.5); }
+.cnt { font-weight: 600; }
+.sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+}
+#search {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  width: 170px;
+  outline: none;
+}
+#search:focus { border-color: var(--accent); }
+.tb {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.tb:hover { background: var(--bg-hover); color: var(--text); }
+
+/* ---- Main layout ---- */
+main {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  overflow: hidden;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  #detail-panel { border-left: none; border-top: 1px solid var(--border); }
+}
+
+/* ---- Tree panel ---- */
+#tree-panel {
+  overflow: auto;
+  padding: 8px 12px;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.node-header:hover { background: var(--bg-hover); }
+.node-header.selected { background: var(--bg-selected); }
+.node-header.path-hl { background: var(--bg-path); }
+.node-header.dimmed { opacity: .3; }
+
+/* Toggle triangle */
+.tog {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tog::before {
+  content: '';
+  display: block;
+  width: 0; height: 0;
+  border: 3.5px solid transparent;
+  border-left: 5px solid var(--text-muted);
+  margin-left: 2px;
+  transition: transform .12s;
+}
+.tog.open::before {
+  transform: rotate(90deg);
+  margin-left: 0;
+  margin-top: 2px;
+}
+.tog.leaf::before { border-color: transparent; }
+
+/* Status dot */
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.dot.frontier { background: var(--c-frontier); }
+.dot.explored { background: var(--c-explored); }
+.dot.error    { background: var(--c-error); }
+.dot.terminal { background: var(--c-terminal); }
+.dot.loop     { background: var(--c-loop); }
+
+.nid {
+  color: var(--text-muted);
+  font-size: 10px;
+  min-width: 30px;
+}
+.cmd { flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; }
+.room-tag {
+  color: var(--accent);
+  font-size: 10px;
+  padding: 0 4px;
+  background: #eef2ff;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.score-tag {
+  color: var(--c-explored);
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ev-tag {
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #fef3c7;
+  color: #92400e;
+  flex-shrink: 0;
+}
+.ch-count {
+  font-size: 9px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.node-children {
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+  margin-left: 6px;
+}
+
+/* ---- Detail panel ---- */
+#detail-panel {
+  border-left: 1px solid var(--border);
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg-alt);
+}
+#detail-panel h2 {
+  font-size: 15px;
+  margin-bottom: 12px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#detail-panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin: 14px 0 6px;
+}
+.dt {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+.dt td {
+  padding: 3px 0;
+  vertical-align: top;
+}
+.dt td:first-child {
+  width: 80px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.path-box {
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 12px;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.resp-box {
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: auto;
+  max-height: 320px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+.ev-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 4px;
+}
+.ev-badge.pos  { background: #dcfce7; color: #166534; }
+.ev-badge.neg  { background: #fee2e2; color: #991b1b; }
+.ev-badge.death { background: #fee2e2; color: #991b1b; }
+.ev-badge.win  { background: #dbeafe; color: #1e40af; }
+.copy-btn {
+  padding: 3px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.copy-btn:hover { background: var(--bg-hover); }
+.placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  margin-top: 40%;
+  font-size: 13px;
+}
+
+/* ---- Rooms bar ---- */
+#rooms-bar {
+  padding: 6px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-alt);
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+}
+.rooms-lbl {
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+.room-chip {
+  padding: 1px 8px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 12px;
+}
+.room-chip:hover { background: var(--bg-hover); }
+.room-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.loading, .err-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+}
+.err-msg { color: var(--c-terminal); padding: 20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="title">Game Explorer</h1>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="toolbar">
+  <button class="filter-btn active" data-f="all">All <span class="cnt" id="c-all"></span></button>
+  <button class="filter-btn" data-f="frontier"><span class="dot frontier"></span>Frontier <span class="cnt" id="c-frontier"></span></button>
+  <button class="filter-btn" data-f="explored"><span class="dot explored"></span>Explored <span class="cnt" id="c-explored"></span></button>
+  <button class="filter-btn" data-f="error"><span class="dot error"></span>Error <span class="cnt" id="c-error"></span></button>
+  <button class="filter-btn" data-f="terminal"><span class="dot terminal"></span>Terminal <span class="cnt" id="c-terminal"></span></button>
+  <button class="filter-btn" data-f="loop"><span class="dot loop"></span>Loop <span class="cnt" id="c-loop"></span></button>
+  <span class="sep"></span>
+  <input type="text" id="search" placeholder="Search commands...">
+  <span class="sep"></span>
+  <button class="tb" onclick="expandAll()">Expand All</button>
+  <button class="tb" onclick="collapseAll()">Collapse All</button>
+  <span class="sep"></span>
+  <button class="tb" onclick="doRefresh()">Refresh</button>
+</div>
+
+<main>
+  <div id="tree-panel"><div class="loading">Loading...</div></div>
+  <div id="detail-panel">
+    <div id="detail-content"><p class="placeholder">Click a node to view details</p></div>
+  </div>
+</main>
+
+<div id="rooms-bar"><span class="rooms-lbl">Rooms:</span></div>
+
+<script>
+let D = null;          // raw JSON data
+let selId = null;      // selected node id
+let filt = 'all';      // active status filter
+let filtRoom = null;   // active room filter
+
+// ---- Init ----
+async function init() {
+  try {
+    const r = await fetch('/data.json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    D = await r.json();
+    render();
+  } catch (e) {
+    document.getElementById('tree-panel').innerHTML =
+      '<div class="err-msg">Failed to load data: ' + esc(e.message) + '</div>';
+  }
+}
+
+function render() {
+  const game = D.meta?.game || '?';
+  document.getElementById('title').textContent = 'Game Explorer: ' + game;
+  document.title = 'Explorer: ' + game;
+
+  const ns = Object.values(D.nodes);
+  const rooms = new Set(ns.map(n => n.room).filter(Boolean));
+  const maxD = Math.max(0, ...ns.map(n => n.depth));
+  const scores = ns.map(n => n.score);
+  const lo = Math.min(...scores), hi = Math.max(...scores);
+
+  document.getElementById('stats').innerHTML =
+    s('stat-val', ns.length) + ' nodes &middot; ' +
+    s('stat-val', rooms.size) + ' rooms &middot; depth ' +
+    s('stat-val', maxD) + ' &middot; score ' +
+    s('stat-val', lo === hi ? lo : lo + '&#8211;' + hi) +
+    ' &middot; seed ' + s('stat-val', D.meta?.seed ?? 'none');
+
+  // Counts
+  const cnts = { all: ns.length };
+  for (const n of ns) cnts[n.status] = (cnts[n.status] || 0) + 1;
+  for (const k of ['all','frontier','explored','error','terminal','loop']) {
+    const el = document.getElementById('c-' + k);
+    if (el) el.textContent = cnts[k] || 0;
+  }
+
+  // Tree
+  const tp = document.getElementById('tree-panel');
+  tp.innerHTML = '';
+  if (D.nodes.root) tp.appendChild(buildNode('root', 0));
+  else tp.innerHTML = '<div class="err-msg">No root node</div>';
+
+  // Rooms bar
+  renderRooms(rooms);
+}
+
+function s(cls, v) { return '<span class="' + cls + '">' + v + '</span>'; }
+
+// ---- Build tree ----
+function buildNode(id, depth) {
+  const n = D.nodes[id];
+  if (!n) return document.createDocumentFragment();
+  const kids = (n.children || []).filter(c => D.nodes[c]);
+  const hasKids = kids.length > 0;
+  const open = depth === 0;
+
+  const div = document.createElement('div');
+  div.className = 'node';
+  div.dataset.id = id;
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className = 'node-header';
+  hdr.dataset.status = n.status;
+  hdr.dataset.room = n.room || '';
+
+  // Room changed from parent?
+  let roomChanged = false;
+  if (n.parent && D.nodes[n.parent]) roomChanged = n.room !== D.nodes[n.parent].room;
+  else if (!n.parent && n.room) roomChanged = true;
+
+  let h = '<span class="tog ' + (hasKids ? (open ? 'open' : '') : 'leaf') + '"></span>';
+  h += '<span class="dot ' + n.status + '"></span>';
+  h += '<span class="nid">' + id + '</span>';
+  h += '<span class="cmd">' + esc(n.command || '(start)') + '</span>';
+  if (roomChanged && n.room) h += '<span class="room-tag">' + esc(n.room) + '</span>';
+  if (n.score > 0) h += '<span class="score-tag">' + n.score + 'pts</span>';
+  for (const ev of n.events || []) h += '<span class="ev-tag">' + esc(ev) + '</span>';
+  if (hasKids) h += '<span class="ch-count">' + kids.length + '</span>';
+
+  hdr.innerHTML = h;
+  div.appendChild(hdr);
+
+  if (hasKids) {
+    const ch = document.createElement('div');
+    ch.className = 'node-children';
+    if (!open) ch.style.display = 'none';
+    for (const cid of kids) ch.appendChild(buildNode(cid, depth + 1));
+    div.appendChild(ch);
+  }
+  return div;
+}
+
+function renderRooms(rooms) {
+  const bar = document.getElementById('rooms-bar');
+  bar.innerHTML = '<span class="rooms-lbl">Rooms:</span>';
+  for (const rm of [...rooms].sort()) {
+    const chip = document.createElement('span');
+    chip.className = 'room-chip' + (filtRoom === rm ? ' active' : '');
+    chip.textContent = rm;
+    chip.onclick = () => toggleRoom(rm);
+    bar.appendChild(chip);
+  }
+}
+
+// ---- Tree interaction (event delegation) ----
+document.getElementById('tree-panel').addEventListener('click', e => {
+  const hdr = e.target.closest('.node-header');
+  if (!hdr) return;
+  const nd = hdr.closest('.node');
+  const id = nd.dataset.id;
+
+  // Toggle?
+  if (e.target.closest('.tog') && !e.target.closest('.tog').classList.contains('leaf')) {
+    const ch = nd.querySelector(':scope > .node-children');
+    const tog = hdr.querySelector('.tog');
+    if (ch) {
+      const show = ch.style.display === 'none';
+      ch.style.display = show ? '' : 'none';
+      tog.classList.toggle('open', show);
+    }
+    return;
+  }
+
+  // Select
+  selectNode(id);
+});
+
+function selectNode(id) {
+  // Clear old selection + path
+  document.querySelectorAll('.node-header.selected, .node-header.path-hl')
+    .forEach(el => el.classList.remove('selected', 'path-hl'));
+
+  // Highlight path
+  const path = getPath(id);
+  for (const n of path) {
+    const el = document.querySelector('.node[data-id="' + n.id + '"] > .node-header');
+    if (el) {
+      el.classList.add(n.id === id ? 'selected' : 'path-hl');
+      // Expand ancestors
+      expandAncestors(el);
+    }
+  }
+
+  selId = id;
+  renderDetail(id);
+
+  // Scroll selected into view
+  const sel = document.querySelector('.node[data-id="' + id + '"] > .node-header');
+  if (sel) sel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function expandAncestors(el) {
+  let p = el.closest('.node')?.parentElement;
+  while (p?.classList?.contains('node-children')) {
+    p.style.display = '';
+    const pn = p.closest('.node');
+    const t = pn?.querySelector(':scope > .node-header .tog');
+    if (t) t.classList.add('open');
+    p = pn?.parentElement;
+  }
+}
+
+function getPath(id) {
+  const path = [];
+  let cur = id;
+  while (cur && D.nodes[cur]) {
+    path.unshift(D.nodes[cur]);
+    cur = D.nodes[cur].parent;
+  }
+  return path;
+}
+
+// ---- Detail panel ----
+function renderDetail(id) {
+  const n = D.nodes[id];
+  if (!n) return;
+  const path = getPath(id);
+  const cmds = path.filter(x => x.command).map(x => x.command);
+  const panel = document.getElementById('detail-content');
+
+  let evHtml = '';
+  if (n.events?.length) {
+    evHtml = '<h3>Events</h3><div>';
+    for (const ev of n.events) {
+      let c = 'pos';
+      if (ev.includes('DEATH')) c = 'death';
+      else if (ev.includes('WON')) c = 'win';
+      else if (ev.startsWith('-')) c = 'neg';
+      evHtml += '<span class="ev-badge ' + c + '">' + esc(ev) + '</span>';
+    }
+    evHtml += '</div>';
+  }
+
+  panel.innerHTML =
+    '<h2><span class="dot ' + n.status + '"></span> ' + id + '</h2>' +
+    '<table class="dt">' +
+      tr('Command', '<strong>' + esc(n.command || '(start)') + '</strong>') +
+      tr('Room', esc(n.room || '\u2014')) +
+      tr('Score', n.score) +
+      tr('Status', n.status) +
+      tr('Depth', n.depth) +
+      tr('Interest', (n.interest ?? 0).toFixed(1)) +
+      tr('Fingerprint', '<code>' + esc(n.fingerprint || '') + '</code>') +
+      tr('Children', (n.children?.length || 0)) +
+    '</table>' +
+    evHtml +
+    '<h3>Path (' + cmds.length + ' commands)</h3>' +
+    '<div class="path-box">' +
+      (cmds.length ? cmds.map(c => esc(c)).join(' &rarr; ') : '(root)') +
+    '</div>' +
+    '<button class="copy-btn" onclick="copyPath()">Copy Path</button>' +
+    '<h3>Response</h3>' +
+    '<pre class="resp-box">' + esc(n.response || '(empty)') + '</pre>' +
+    (n.excerpt ? '<h3>Excerpt</h3><p style="font-size:13px;color:var(--text-muted)">' + esc(n.excerpt) + '</p>' : '');
+}
+
+function tr(k, v) { return '<tr><td>' + k + '</td><td>' + v + '</td></tr>'; }
+
+function copyPath() {
+  if (!selId) return;
+  const cmds = getPath(selId).filter(n => n.command).map(n => n.command).join('\n');
+  navigator.clipboard.writeText(cmds).then(() => {
+    const b = document.querySelector('.copy-btn');
+    b.textContent = 'Copied!';
+    setTimeout(() => b.textContent = 'Copy Path', 1200);
+  });
+}
+
+// ---- Filters ----
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filt = btn.dataset.f;
+    applyFilters();
+    if (filt !== 'all') expandToStatus(filt);
+  });
+});
+
+document.getElementById('search').addEventListener('input', applyFilters);
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase();
+  document.querySelectorAll('.node-header').forEach(hdr => {
+    const st = hdr.dataset.status;
+    const cmd = (hdr.querySelector('.cmd')?.textContent || '').toLowerCase();
+    const rm = hdr.dataset.room || '';
+    let dim = false;
+    if (filt !== 'all' && st !== filt) dim = true;
+    if (filtRoom && rm !== filtRoom) dim = true;
+    if (q && !cmd.includes(q)) dim = true;
+    hdr.classList.toggle('dimmed', dim);
+  });
+}
+
+function expandToStatus(status) {
+  document.querySelectorAll('.node-header').forEach(hdr => {
+    if (hdr.dataset.status === status) expandAncestors(hdr);
+  });
+}
+
+function toggleRoom(rm) {
+  filtRoom = filtRoom === rm ? null : rm;
+  document.querySelectorAll('.room-chip').forEach(c => {
+    c.classList.toggle('active', c.textContent === filtRoom);
+  });
+  applyFilters();
+  if (filtRoom) {
+    document.querySelectorAll('.node-header').forEach(hdr => {
+      if (hdr.dataset.room === filtRoom) expandAncestors(hdr);
+    });
+  }
+}
+
+// ---- Expand/Collapse ----
+function expandAll() {
+  document.querySelectorAll('.node-children').forEach(el => el.style.display = '');
+  document.querySelectorAll('.tog').forEach(el => {
+    if (!el.classList.contains('leaf')) el.classList.add('open');
+  });
+}
+
+function collapseAll() {
+  document.querySelectorAll('.node-children').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tog').forEach(el => el.classList.remove('open'));
+  const rc = document.querySelector('.node[data-id="root"] > .node-children');
+  if (rc) rc.style.display = '';
+  const rt = document.querySelector('.node[data-id="root"] > .node-header .tog');
+  if (rt) rt.classList.add('open');
+}
+
+// ---- Refresh ----
+async function doRefresh() {
+  try {
+    const r = await fetch('/data.json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const nd = await r.json();
+    if (nd.next_id !== D.next_id || Object.keys(nd.nodes).length !== Object.keys(D.nodes).length) {
+      D = nd;
+      render();
+      if (selId && D.nodes[selId]) selectNode(selId);
+    }
+  } catch (e) { console.error('Refresh failed:', e); }
+}
+
+// ---- Utility ----
+function esc(t) {
+  if (t == null) return '';
+  const d = document.createElement('div');
+  d.textContent = String(t);
+  return d.innerHTML;
+}
+
+// ---- Go ----
+init();
+</script>
+</body>
+</html>

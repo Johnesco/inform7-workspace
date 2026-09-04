@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dialog vs Inform 7 &mdash; Language Comparison</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  height: 100%;
+  background: #0a0a0a;
+  color: #d4c5a9;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+body {
+  min-height: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+  line-height: 1.7;
+}
+
+h1 {
+  font-size: 1.8em;
+  color: #e8d8b0;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-style: italic;
+  color: #aa9966;
+  margin-bottom: 40px;
+}
+
+h2 {
+  font-size: 1.3em;
+  color: #c4b48a;
+  margin-top: 48px;
+  margin-bottom: 16px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2a2418;
+}
+
+h3 {
+  font-size: 1.05em;
+  color: #b8a878;
+  margin-top: 28px;
+  margin-bottom: 10px;
+}
+
+p, li {
+  margin-bottom: 12px;
+}
+
+ul, ol {
+  padding-left: 24px;
+}
+
+a {
+  color: #e8d090;
+  text-decoration: none;
+  border-bottom: 1px solid #5a4a30;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+a:hover {
+  color: #ffe8a0;
+  border-bottom-color: #aa9966;
+}
+
+/* ── Comparison table ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0 28px;
+  font-size: 0.92em;
+}
+
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid #2a2418;
+  vertical-align: top;
+}
+
+th {
+  background: #1a1408;
+  color: #c4b48a;
+  font-weight: normal;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+td {
+  background: #0f0e0a;
+}
+
+tr:hover td {
+  background: #141208;
+}
+
+/* ── Code blocks ── */
+pre {
+  background: #111008;
+  border: 1px solid #2a2418;
+  border-radius: 4px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 0.85em;
+  line-height: 1.55;
+  color: #c8b888;
+  margin: 12px 0 20px;
+  tab-size: 4;
+}
+
+code {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 0.88em;
+  color: #d0bc8c;
+  background: #151208;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ── Side-by-side code comparison ── */
+.code-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0 24px;
+}
+
+.code-compare > div {
+  min-width: 0;
+}
+
+.code-compare .lang-label {
+  font-size: 0.78em;
+  color: #aa9966;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+
+.code-compare pre {
+  margin: 0;
+  font-size: 0.82em;
+}
+
+/* ── Verdict boxes ── */
+.verdict {
+  border-left: 3px solid #5a4a30;
+  padding: 12px 16px;
+  margin: 16px 0 24px;
+  background: #0f0e08;
+  font-style: italic;
+  color: #b8a878;
+}
+
+/* ── Tag pills ── */
+.tag {
+  display: inline-block;
+  font-size: 0.75em;
+  padding: 2px 10px;
+  border-radius: 10px;
+  border: 1px solid #2a2418;
+  color: #aa9966;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.tag.dialog { border-color: #4a6a4a; color: #8ab88a; }
+.tag.inform { border-color: #6a5a3a; color: #c8a868; }
+.tag.tie    { border-color: #4a4a6a; color: #8a8ac8; }
+
+/* ── TOC ── */
+.toc {
+  background: #0f0e08;
+  border: 1px solid #2a2418;
+  border-radius: 4px;
+  padding: 16px 20px;
+  margin: 24px 0 36px;
+}
+
+.toc h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #c4b48a;
+}
+
+.toc ol {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+
+.toc li {
+  margin-bottom: 4px;
+  font-size: 0.92em;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .code-compare {
+    grid-template-columns: 1fr;
+  }
+  table { font-size: 0.82em; }
+  th, td { padding: 8px 10px; }
+}
+</style>
+</head>
+<body>
+
+<h1>Dialog vs Inform 7</h1>
+<p class="subtitle">A side-by-side comparison of two modern interactive fiction languages</p>
+
+<nav class="toc">
+<h3>Contents</h3>
+<ol>
+  <li><a href="#overview">Overview</a></li>
+  <li><a href="#philosophy">Design Philosophy</a></li>
+  <li><a href="#syntax">Syntax &amp; Paradigm</a></li>
+  <li><a href="#world">World Model</a></li>
+  <li><a href="#actions">Actions &amp; Rules</a></li>
+  <li><a href="#text">Text Output &amp; Formatting</a></li>
+  <li><a href="#parser">Parser &amp; Understanding</a></li>
+  <li><a href="#npcs">NPCs &amp; Conversation</a></li>
+  <li><a href="#tooling">Tooling &amp; Deployment</a></li>
+  <li><a href="#performance">Performance &amp; Targets</a></li>
+  <li><a href="#ecosystem">Ecosystem &amp; Community</a></li>
+  <li><a href="#summary">Summary Table</a></li>
+  <li><a href="#choosing">Which Should You Choose?</a></li>
+</ol>
+</nav>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="overview">1. Overview</h2>
+
+<table>
+<tr>
+  <th></th>
+  <th>Dialog</th>
+  <th>Inform 7</th>
+</tr>
+<tr>
+  <td>Author</td>
+  <td>Linus &Aring;kesson</td>
+  <td>Graham Nelson</td>
+</tr>
+<tr>
+  <td>First release</td>
+  <td>2018</td>
+  <td>2006</td>
+</tr>
+<tr>
+  <td>Current version</td>
+  <td>0.46 (beta)</td>
+  <td>10.1.2 (stable)</td>
+</tr>
+<tr>
+  <td>License</td>
+  <td>BSD 2-clause (open source)</td>
+  <td>Artistic License 2.0 (open source)</td>
+</tr>
+<tr>
+  <td>Paradigm</td>
+  <td>Logic programming (Prolog-inspired)</td>
+  <td>Natural language programming</td>
+</tr>
+<tr>
+  <td>Primary output</td>
+  <td>Z-machine (z5/z8) or &Aring;-machine</td>
+  <td>Glulx (.ulx) or Z-machine (.z8)</td>
+</tr>
+<tr>
+  <td>Web playable</td>
+  <td>Yes (via &Aring;-machine bundle or Z-machine interpreters)</td>
+  <td>Yes (via Parchment / Quixe)</td>
+</tr>
+</table>
+
+<p><strong>Dialog</strong> is a rule-based language in the logic programming family, designed from the ground up for interactive fiction. It draws on Prolog's unification and backtracking model while providing a purpose-built standard library for world modeling and parsing.</p>
+
+<p><strong>Inform 7</strong> is a natural-language programming system where source code reads like English prose. It compiles through Inform 6 (a C-like language) to produce virtual machine bytecode. Its Standard Rules provide an extensive, battle-tested world model.</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="philosophy">2. Design Philosophy</h2>
+
+<h3>Dialog: Lucidity, Minimalism, Performance</h3>
+<ul>
+  <li><strong>Lucidity</strong> &mdash; Story authors should be able to read, understand, and modify the standard library. The same language constructs handle everything from world modeling to parsing.</li>
+  <li><strong>Minimalism</strong> &mdash; A few well-integrated concepts (predicates, rules, backtracking) provide expressive power without special-case syntax.</li>
+  <li><strong>Performance</strong> &mdash; Designed from inception to generate compact, efficient code that can run on vintage hardware (including the Commodore 64).</li>
+</ul>
+
+<h3>Inform 7: Literacy, Expressiveness, Ecosystem</h3>
+<ul>
+  <li><strong>Natural language</strong> &mdash; Source code is meant to be readable by non-programmers. Rules are written as English sentences.</li>
+  <li><strong>Rich world model</strong> &mdash; Decades of refinement in modeling rooms, containment, actions, scenes, and relations.</li>
+  <li><strong>Extensibility</strong> &mdash; A large extension ecosystem and active community with thousands of published works.</li>
+</ul>
+
+<div class="verdict">
+  Dialog prioritizes transparency and efficiency. Inform 7 prioritizes accessibility and literary expression. Both aim to make IF authoring approachable, but from opposite directions.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="syntax">3. Syntax &amp; Paradigm</h2>
+
+<p>The most immediately visible difference: Dialog uses a formal, symbolic syntax derived from logic programming, while Inform 7 uses natural English.</p>
+
+<h3>Hello World</h3>
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>(program entry point)
+  Hello, world!</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>"Hello" by "Author"
+
+The Lab is a room.
+
+When play begins:
+  say "Hello, world!"</code></pre>
+  </div>
+</div>
+
+<p>Dialog's entry point is a predicate. Inform 7 requires at minimum a title, an author, and a room (the world model demands a location for the player).</p>
+
+<h3>Rule Structure</h3>
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% Rules are predicate definitions.
+%% Multiple rules = multiple clauses,
+%% tried in source order.
+
+(descr #apple)
+  The apple looks yummy.
+
+(descr #door)
+  The oaken door is sturdy.
+
+(descr $)
+  It looks unremarkable.</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>[ Rules are English sentences
+  organized by rulebooks. ]
+
+The description of the apple is
+  "The apple looks yummy."
+
+The description of the door is
+  "The oaken door is sturdy."
+
+Rule for examining something:
+  say "It looks unremarkable."</code></pre>
+  </div>
+</div>
+
+<h3>Variables and Pattern Matching</h3>
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% $ is wildcard, $Var captures.
+%% # denotes objects.
+%% * is "current topic" shorthand.
+
+(colour #apple) red
+(colour #sky) blue
+(colour $) grey
+
+(descr $Obj)
+  It is (colour $Obj).</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>A thing has text called the colour.
+The colour of the apple is "red".
+The colour of the sky is "blue".
+The colour of a thing is usually
+  "grey".
+
+Instead of examining something:
+  say "It is [colour of the noun]."</code></pre>
+  </div>
+</div>
+
+<div class="verdict">
+  Dialog's syntax is concise and unambiguous &mdash; every construct has one way to write it. Inform 7's syntax is more verbose but immediately readable as English, even to non-programmers. Dialog will feel natural to anyone with Prolog or functional programming experience; Inform 7 will feel natural to writers.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="world">4. World Model</h2>
+
+<h3>Defining Rooms and Things</h3>
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>#kitchen
+(name *)    kitchen
+(room *)
+(look *)    A warm room with
+            copper pots on hooks.
+
+#apple
+(name *)    red apple
+(edible *)
+(* is #in #kitchen)
+(descr *)   Crisp and inviting.</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>The Kitchen is a room. "A warm
+room with copper pots on hooks."
+
+The red apple is an edible thing
+in the Kitchen. The description
+is "Crisp and inviting."</code></pre>
+  </div>
+</div>
+
+<p>In Dialog, objects are "thin" identifiers (<code>#kitchen</code>, <code>#apple</code>) &mdash; they have no inherent behavior. Everything about an object is expressed through predicate rules. The asterisk <code>*</code> is shorthand for the current topic object, reducing repetition.</p>
+
+<p>In Inform 7, objects are declared with natural language assertions and automatically inherit behavior from their kind (thing, room, container, etc.).</p>
+
+<h3>Containment and Relations</h3>
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% Three-part location syntax:
+(#apple is #in #basket)
+(#basket is #on #table)
+(#table is #in #kitchen)
+
+%% Move at runtime:
+(now) (#apple is #in #pocket)
+
+%% Relations: #in, #on, #under,
+%% #behind, #heldby, #wornby,
+%% #partof</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>The apple is in the basket.
+The basket is on the table.
+The table is in the Kitchen.
+
+[ Move at runtime: ]
+Now the apple is in the pocket.
+
+[ Relations: in, on, part of,
+  worn by, carried by,
+  plus custom relations ]</code></pre>
+  </div>
+</div>
+
+<h3>Traits and Properties</h3>
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% Traits are zero-argument predicates
+(edible #apple)
+(portable #apple)
+(openable #box)
+(container #box)
+
+%% Custom traits:
+(fragile #vase)
+(material #vase) porcelain</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>The apple is edible and portable.
+The box is an openable container.
+
+[ Custom properties: ]
+A thing can be fragile.
+The vase is fragile.
+A thing has text called material.
+The material of the vase is
+  "porcelain".</code></pre>
+  </div>
+</div>
+
+<div class="verdict">
+  Both systems model equivalent world structures. Dialog is more explicit &mdash; every relationship is a predicate you write and can inspect. Inform 7 is more declarative at the surface level, with extensive implicit behavior inherited from kinds. Inform 7's custom relations (e.g., "X unlocks Y") go beyond what Dialog offers out of the box, though Dialog can model anything via predicates.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="actions">5. Actions &amp; Rules</h2>
+
+<h3>Action Processing Pipeline</h3>
+
+<table>
+<tr>
+  <th>Stage</th>
+  <th>Dialog</th>
+  <th>Inform 7</th>
+</tr>
+<tr>
+  <td>Accessibility check</td>
+  <td><code>(refuse $Action)</code></td>
+  <td>Accessibility rulebook</td>
+</tr>
+<tr>
+  <td>Automatic prerequisites</td>
+  <td><code>(before $Action)</code></td>
+  <td>Before rules</td>
+</tr>
+<tr>
+  <td>Override / redirect</td>
+  <td><code>(instead of $Action)</code></td>
+  <td>Instead rules</td>
+</tr>
+<tr>
+  <td>Block</td>
+  <td><code>(prevent $Action)</code></td>
+  <td>Check rules</td>
+</tr>
+<tr>
+  <td>Execute</td>
+  <td><code>(perform $Action)</code></td>
+  <td>Carry out rules</td>
+</tr>
+<tr>
+  <td>React</td>
+  <td><code>(after $Action)</code></td>
+  <td>After rules / Report rules</td>
+</tr>
+</table>
+
+<h3>Custom Action Behavior</h3>
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% Block eating the key:
+(prevent [eat #key])
+  That would be unwise.
+
+%% Custom perform:
+(perform [read #sign])
+  The sign says "WELCOME".
+
+%% Redirect:
+(instead of [climb #stairs])
+  (try [go #up])</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>Check eating the key:
+  say "That would be unwise.";
+  stop the action.
+
+Carry out reading the sign:
+  say "The sign says 'WELCOME'."
+
+Instead of climbing the stairs:
+  try going up.</code></pre>
+  </div>
+</div>
+
+<p>Dialog represents actions as lists of words and objects: <code>[give #apple to #eve]</code>. This makes actions first-class data that can be inspected, stored, and transformed. Inform 7 actions are typed constructs with named parameters (noun, second noun).</p>
+
+<h3>Dialog's Group Actions</h3>
+<p>Dialog has a distinctive feature: <strong>group actions</strong> that allow combining multiple objects into a single action with custom narration.</p>
+<pre><code>(action [eat $] may group #ham with #cheese)
+
+(group-perform [eat [#ham #cheese]])
+  You savour the combination of ham and cheese.</code></pre>
+<p>Inform 7 doesn't have a direct equivalent &mdash; "taking all" processes items individually with separate rules.</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="text">6. Text Output &amp; Formatting</h2>
+
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% Paragraph and line breaks:
+(par)
+(line)
+
+%% Styles:
+(bold) Bold text (roman)
+(italic) Italic text (roman)
+(fixed pitch) Mono (roman)
+
+%% Divs and spans with classes:
+(div @quote) {
+  To be or not to be.
+}
+(span @emphasis) { wow }
+
+%% Style class definitions:
+(style class @quote)
+  font-style: italic;
+  margin-top: 2em;
+
+%% Case conversion:
+(uppercase) (a $Obj)</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>[ Paragraph and line breaks: ]
+say "[paragraph break]"
+say "[line break]"
+
+[ Styles: ]
+say "[bold type]Bold[roman type]"
+say "[italic type]Italic
+  [roman type]"
+say "[fixed letter spacing]Mono
+  [variable letter spacing]"
+
+[ No div/span system.
+  Styling is via Glk hints
+  set in I6 inclusions,
+  or CSS in the web player. ]
+
+[ Case conversion: ]
+say "[The noun]"
+say "[Noun in upper case]"</code></pre>
+  </div>
+</div>
+
+<p>Dialog's div/span system with style classes gives authors more control over visual presentation directly in the source language, similar to writing semantic HTML. Inform 7 relies on the Glk layer for styling, which is more limited in the language itself but can be extensively customized via CSS in web players.</p>
+
+<h3>Hyperlinks and Resources</h3>
+
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% Clickable text (appends to
+%% input buffer):
+Why don't you
+  (link) {open the drawer}?
+
+%% External resources:
+(define resource @manual)
+  feelies/manual.pdf
+(link resource @manual) {Read it}
+
+%% Embedded images:
+(embed resource #lighthouse)</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>[ Hyperlinks require Glk
+  extensions &mdash; not universally
+  supported. Typically done
+  via extensions or I6. ]
+
+[ Images via figures: ]
+Figure of Lighthouse is the file
+  "lighthouse.png".
+Display Figure of Lighthouse.
+
+[ Sound via figures: ]
+Sound of Thunder is the file
+  "thunder.ogg".
+Play Sound of Thunder.</code></pre>
+  </div>
+</div>
+
+<div class="verdict">
+  Dialog has richer built-in support for hyperlinks, inline resources, and CSS-like styling. Inform 7 has better support for multimedia (images and sound in blorb packages) and benefits from Glk's standardized I/O layer, which is supported by more interpreters.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="parser">7. Parser &amp; Understanding</h2>
+
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% Dictionary words for objects:
+#lamp
+(name *) brass lamp
+(dict *) lantern light
+
+%% Grammar definitions use
+%% predicate-based patterns:
+(understand [switch on | $Obj])
+  (perform [switch on $Obj])
+
+%% Object resolution via:
+(determine object $Obj)
+  *($Obj is in scope)
+(from words)
+  *(dict $Obj)
+(matching all of $Input)</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>The brass lamp is a device.
+Understand "lantern" and "light"
+  as the lamp.
+
+Understand "switch on [something]"
+  as switching on.
+
+[ Object resolution is automatic
+  based on scope, visibility,
+  and disambiguation rules. ]
+
+Understand "x [something]"
+  as examining.
+Does the player mean examining
+  the lamp: it is likely.</code></pre>
+  </div>
+</div>
+
+<p>Dialog's parser is implemented entirely in Dialog itself (it's part of the standard library, not a black box). Authors can read, modify, and extend every aspect of how input is parsed. Inform 7's parser is deeply integrated and handles disambiguation, pronoun tracking, and scope automatically, but the internals are harder to customize (they live in Inform 6 template code).</p>
+
+<div class="verdict">
+  Dialog's parser is transparent and hackable &mdash; a major advantage for unconventional game designs. Inform 7's parser is more sophisticated out of the box (disambiguation, implicit actions, pronoun resolution) but harder to fundamentally alter.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="npcs">8. NPCs &amp; Conversation</h2>
+
+<div class="code-compare">
+  <div>
+    <div class="lang-label">Dialog</div>
+<pre><code>%% NPC movement and actions:
+(perform [#npc going #north])
+  Bob wanders north.
+
+%% Ask/tell topics:
+(perform [ask #bob about #weather])
+  "Lovely day," Bob replies.
+
+%% Choice-based conversation
+%% is a built-in library feature.
+
+%% Taking orders:
+(perform [#bob, take #sword])
+  Bob picks up the sword.</code></pre>
+  </div>
+  <div>
+    <div class="lang-label">Inform 7</div>
+<pre><code>Every turn when Bob is in the
+  Kitchen:
+  if a random chance of 1 in 3
+    succeeds:
+    let D be a random adjacent
+      room;
+    try Bob going D.
+
+Instead of asking Bob about
+  "weather":
+  say "'Lovely day,' Bob replies."
+
+[ Choice-based conversation
+  requires extensions like
+  Hybrid Choices or
+  Conversation Framework. ]
+
+Persuasion rule for asking Bob
+  to try taking:
+  persuasion succeeds.</code></pre>
+  </div>
+</div>
+
+<div class="verdict">
+  Dialog includes choice-based conversation as a built-in library feature. Inform 7 handles ask/tell natively but needs extensions for menu-based or choice-based dialogue trees. Both handle NPC autonomy (movement, independent actions), though Inform 7's "every turn" rules and scenes give more structure for complex NPC schedules.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="tooling">9. Tooling &amp; Deployment</h2>
+
+<table>
+<tr>
+  <th></th>
+  <th>Dialog</th>
+  <th>Inform 7</th>
+</tr>
+<tr>
+  <td>IDE</td>
+  <td>None (text editor + CLI)</td>
+  <td>Full GUI IDE (Windows, macOS, Linux) with integrated source, index, skein, and testing</td>
+</tr>
+<tr>
+  <td>Compiler</td>
+  <td><code>dialogc</code> (C, open source)</td>
+  <td><code>inform7</code> &rarr; <code>inform6</code> (two-stage)</td>
+</tr>
+<tr>
+  <td>Debugger</td>
+  <td><code>dgdebug</code> &mdash; live source editing, hot reload, query inspection</td>
+  <td>IDE skein, transcript comparison; no live debugger</td>
+</tr>
+<tr>
+  <td>Web bundler</td>
+  <td><code>aambundle</code> &mdash; generates a self-contained HTML/JS/CSS directory</td>
+  <td>Parchment / Quixe &mdash; base64-encode the binary into a JS loader</td>
+</tr>
+<tr>
+  <td>Testing</td>
+  <td>Debugger with <code>@replay</code>, <code>@save</code>, <code>@restore</code></td>
+  <td>Built-in <code>Test me</code>, RegTest, skein, walkthroughs</td>
+</tr>
+<tr>
+  <td>Extensions</td>
+  <td>Include additional <code>.dg</code> files at compile time</td>
+  <td>Formal extension system with versioning, the Public Library, and hundreds of community extensions</td>
+</tr>
+</table>
+
+<p>Dialog's debugger (<code>dgdebug</code>) is notably powerful: it runs source code directly without compilation, supports live editing with state preservation, and allows querying predicates interactively. This is closer to a REPL than anything Inform 7 offers.</p>
+
+<p>Inform 7's IDE provides a richer overall authoring experience: the Index tab auto-generates maps, action tables, and cross-references; the Skein records play sessions as branching trees; and the built-in documentation is searchable with inline examples.</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="performance">10. Performance &amp; Targets</h2>
+
+<table>
+<tr>
+  <th></th>
+  <th>Dialog</th>
+  <th>Inform 7</th>
+</tr>
+<tr>
+  <td>Primary VM</td>
+  <td>&Aring;-machine (custom) or Z-machine</td>
+  <td>Glulx (32-bit) or Z-machine</td>
+</tr>
+<tr>
+  <td>Story size limit</td>
+  <td>256 KB (z5) / 512 KB (z8) / unlimited (&Aring;-machine)</td>
+  <td>Effectively unlimited (Glulx)</td>
+</tr>
+<tr>
+  <td>Vintage hardware</td>
+  <td>Yes &mdash; runs on Commodore 64, 8-bit micros</td>
+  <td>No &mdash; Glulx needs 32-bit; Z-machine output often exceeds vintage limits</td>
+</tr>
+<tr>
+  <td>Web interpreters</td>
+  <td>&Aring;-machine web runtime, Parchment (for Z-code output)</td>
+  <td>Parchment (Quixe for Glulx, Bocfel for Z-machine)</td>
+</tr>
+<tr>
+  <td>Optimization</td>
+  <td>Aggressive &mdash; global analysis, first-parameter dispatch, tail-call optimization</td>
+  <td>Moderate &mdash; relies on I6 compiler optimizations</td>
+</tr>
+<tr>
+  <td>Multimedia</td>
+  <td>Images (embeddable), hyperlinks; limited sound</td>
+  <td>Images, sound (blorb), full Glk multimedia stack</td>
+</tr>
+</table>
+
+<p>Dialog's emphasis on performance is a defining characteristic. The compiler performs global analysis to choose optimal representations for each predicate, often converting what looks like a linear search through rules into a constant-time property lookup. This makes Dialog uniquely suited for resource-constrained platforms.</p>
+
+<p>Inform 7's Glulx target has no practical size limits and supports a richer multimedia stack (images, multi-channel sound via blorb), making it better suited for large, media-rich works.</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="ecosystem">11. Ecosystem &amp; Community</h2>
+
+<table>
+<tr>
+  <th></th>
+  <th>Dialog</th>
+  <th>Inform 7</th>
+</tr>
+<tr>
+  <td>Published games</td>
+  <td>Handful (including award-winning <em>The Impossible Bottle</em>)</td>
+  <td>Thousands (dominant parser-IF language since 2006)</td>
+</tr>
+<tr>
+  <td>Extensions</td>
+  <td>Minimal &mdash; standard library covers most needs</td>
+  <td>Hundreds in the Public Library (conversation, UI, puzzles, etc.)</td>
+</tr>
+<tr>
+  <td>Documentation</td>
+  <td>Comprehensive manual (&Aring;kesson)</td>
+  <td>Extensive &mdash; <em>Writing with Inform</em>, <em>The Recipe Book</em>, community wikis</td>
+</tr>
+<tr>
+  <td>Community</td>
+  <td>Small, growing (intfiction.org)</td>
+  <td>Large, established (intfiction.org, Discord, Reddit, IFTF)</td>
+</tr>
+<tr>
+  <td>Competition wins</td>
+  <td><em>The Impossible Bottle</em> (IFComp 2020, 1st place)</td>
+  <td>Numerous IFComp and XYZZY winners across two decades</td>
+</tr>
+<tr>
+  <td>Learning resources</td>
+  <td>Official manual, example code</td>
+  <td>Books, tutorials, university courses, YouTube, example projects</td>
+</tr>
+</table>
+
+<div class="verdict">
+  Inform 7 has an overwhelming ecosystem advantage. Dialog is a younger language with a smaller but dedicated community. <em>The Impossible Bottle</em> (2020 IFComp winner) demonstrated that Dialog can produce world-class IF, but the learning resources and community support for Inform 7 are much more extensive.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="summary">12. Summary Table</h2>
+
+<table>
+<tr>
+  <th>Dimension</th>
+  <th>Advantage</th>
+  <th>Notes</th>
+</tr>
+<tr>
+  <td>Readability for non-coders</td>
+  <td><span class="tag inform">Inform 7</span></td>
+  <td>Natural English syntax is unmatched</td>
+</tr>
+<tr>
+  <td>Readability for programmers</td>
+  <td><span class="tag dialog">Dialog</span></td>
+  <td>Formal, unambiguous syntax with clear scoping</td>
+</tr>
+<tr>
+  <td>Performance / compact output</td>
+  <td><span class="tag dialog">Dialog</span></td>
+  <td>Purpose-built for vintage hardware</td>
+</tr>
+<tr>
+  <td>Large game support</td>
+  <td><span class="tag inform">Inform 7</span></td>
+  <td>Glulx has no practical size limits</td>
+</tr>
+<tr>
+  <td>Multimedia (sound, images)</td>
+  <td><span class="tag inform">Inform 7</span></td>
+  <td>Full blorb + Glk multimedia stack</td>
+</tr>
+<tr>
+  <td>Parser transparency</td>
+  <td><span class="tag dialog">Dialog</span></td>
+  <td>Parser is readable Dialog source, not a black box</td>
+</tr>
+<tr>
+  <td>Debugger / REPL</td>
+  <td><span class="tag dialog">Dialog</span></td>
+  <td>Live editing with state preservation</td>
+</tr>
+<tr>
+  <td>IDE experience</td>
+  <td><span class="tag inform">Inform 7</span></td>
+  <td>Full GUI with index, skein, and integrated docs</td>
+</tr>
+<tr>
+  <td>Extensions &amp; ecosystem</td>
+  <td><span class="tag inform">Inform 7</span></td>
+  <td>Two decades of community contributions</td>
+</tr>
+<tr>
+  <td>Standard library transparency</td>
+  <td><span class="tag dialog">Dialog</span></td>
+  <td>Same language as user code; designed to be read</td>
+</tr>
+<tr>
+  <td>Conversation systems</td>
+  <td><span class="tag dialog">Dialog</span></td>
+  <td>Choice-based conversation is built in</td>
+</tr>
+<tr>
+  <td>Web deployment</td>
+  <td><span class="tag tie">Tie</span></td>
+  <td>Both have mature web player solutions</td>
+</tr>
+<tr>
+  <td>Community &amp; learning resources</td>
+  <td><span class="tag inform">Inform 7</span></td>
+  <td>Much larger body of tutorials, examples, and support</td>
+</tr>
+<tr>
+  <td>Stability / maturity</td>
+  <td><span class="tag inform">Inform 7</span></td>
+  <td>Dialog is still in beta; language may change</td>
+</tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="choosing">13. Which Should You Choose?</h2>
+
+<h3>Choose Dialog if you&hellip;</h3>
+<ul>
+  <li>Have programming experience (especially logic programming or Prolog)</li>
+  <li>Want to understand and modify every layer of the system, including the parser</li>
+  <li>Are targeting vintage hardware or need extremely compact output</li>
+  <li>Prefer a powerful debugger with live-editing capabilities</li>
+  <li>Want built-in choice-based conversation without extensions</li>
+  <li>Value a minimal, coherent language over a large ecosystem</li>
+</ul>
+
+<h3>Choose Inform 7 if you&hellip;</h3>
+<ul>
+  <li>Are new to programming or prefer writing in natural English</li>
+  <li>Want a full IDE with visual tools (map, index, skein)</li>
+  <li>Need multimedia support (embedded sound, images, blorb packaging)</li>
+  <li>Are building a large, complex game that may exceed Z-machine limits</li>
+  <li>Want access to a large extension library and active community</li>
+  <li>Need a stable, mature platform for long-term projects</li>
+</ul>
+
+<h3>Consider both if you&hellip;</h3>
+<ul>
+  <li>Want to prototype in Dialog (fast compile, great debugger) and publish in either</li>
+  <li>Are writing a parser game with unconventional mechanics &mdash; Dialog's transparent parser may be easier to bend to unusual designs</li>
+  <li>Are interested in the craft of IF system design &mdash; studying both languages will deepen your understanding</li>
+</ul>
+
+<div class="verdict">
+  Neither language is universally "better." Dialog is a sharper, more transparent tool for authors who think like programmers. Inform 7 is a more welcoming, more feature-rich environment for authors who think like writers. The best IF works have been created in both.
+</div>
+
+<p style="margin-top: 48px; font-size: 0.85em; color: #6a5a3a; border-top: 1px solid #2a2418; padding-top: 16px;">
+  <strong>Sources:</strong>
+  <a href="https://linusakesson.net/dialog/docs/index.html">Dialog Manual</a> (Linus &Aring;kesson) &bull;
+  <a href="https://ganelson.github.io/inform-website/">Inform 7</a> (Graham Nelson) &bull;
+  Compiled March 2026
+</p>
+
+</body>
+</html>

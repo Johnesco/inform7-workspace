@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>I7 Testing Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #222; font-size: 15px; padding: 20px 32px; }
+
+h1 { font-size: 1.4em; font-weight: 700; margin-bottom: 4px; }
+.subtitle { color: #666; font-size: .9em; margin-bottom: 20px; }
+
+/* Game cards */
+.game-grid { display: flex; flex-direction: column; gap: 12px; max-width: 1100px; }
+.game-card { background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+.game-header { display: flex; align-items: center; padding: 12px 16px; gap: 12px; cursor: pointer; user-select: none; }
+.game-header:hover { background: #fafafa; }
+.game-name { font-weight: 700; font-size: 1.05em; min-width: 180px; }
+.layer-badges { display: flex; gap: 6px; flex: 1; }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: .82em; font-weight: 600; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: .3px; }
+.badge-pass { background: #d4edda; color: #155724; }
+.badge-fail { background: #f8d7da; color: #721c24; }
+.badge-skip { background: #e9ecef; color: #6c757d; }
+.badge-running { background: #cce5ff; color: #004085; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+
+.game-actions { display: flex; gap: 6px; }
+.btn { padding: 6px 14px; font-family: inherit; font-size: .85em; font-weight: 600; border: 1px solid #ccc; background: #fff; color: #333; border-radius: 6px; cursor: pointer; transition: all .1s; }
+.btn:hover { background: #f0f0f0; border-color: #999; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn-run { background: #28a745; color: #fff; border-color: #28a745; }
+.btn-run:hover { background: #218838; }
+.btn-run:disabled { background: #28a745; }
+
+.win-count { font-size: .8em; color: #155724; font-weight: 600; background: #d4edda; padding: 2px 8px; border-radius: 10px; }
+.assert-count { font-size: .8em; color: #004085; font-weight: 600; background: #cce5ff; padding: 2px 8px; border-radius: 10px; }
+.timestamp { font-size: .78em; color: #999; }
+
+/* Expanded detail */
+.game-detail { display: none; border-top: 1px solid #eee; padding: 16px; background: #fafafa; }
+.game-card.expanded .game-detail { display: block; }
+
+/* Layer sections */
+.layer-section { margin-bottom: 16px; }
+.layer-title { font-weight: 700; font-size: .95em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.layer-title .badge { font-size: .75em; }
+
+/* Scenario table */
+.scenario-table { width: 100%; border-collapse: collapse; font-size: .9em; }
+.scenario-table th { text-align: left; padding: 6px 10px; font-size: .8em; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 2px solid #ddd; }
+.scenario-table td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+.scenario-table tr:hover { background: #f0f4ff; }
+.scenario-table tr.row-win { background: #f0fff4; }
+.scenario-table tr.row-win:hover { background: #e0ffe8; }
+.scenario-table tr.row-fail { background: #fff5f5; }
+.scenario-table tr.row-assert-fail { background: #fff8e1; }
+.scenario-name { font-weight: 600; cursor: pointer; color: #0066cc; }
+.scenario-name:hover { text-decoration: underline; }
+.cat-tag { font-size: .78em; color: #888; background: #f0f0f0; padding: 1px 6px; border-radius: 3px; }
+.primary-tag { font-size: .72em; color: #155724; background: #d4edda; padding: 1px 6px; border-radius: 3px; font-weight: 700; }
+.score { font-family: "SF Mono", Consolas, monospace; font-size: .9em; }
+.deaths { color: #721c24; font-weight: 600; }
+.errors { color: #856404; }
+.win-marker { color: #155724; font-weight: 700; }
+.seed { font-family: "SF Mono", Consolas, monospace; font-size: .85em; color: #6f42c1; }
+.assert-pass { color: #155724; font-weight: 600; }
+.assert-fail { color: #721c24; font-weight: 700; }
+.assert-detail { font-family: "SF Mono", Consolas, monospace; font-size: .82em; color: #721c24; padding: 4px 0; }
+
+/* Transcript viewer */
+.transcript-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.5); z-index: 100; }
+.transcript-overlay.visible { display: flex; align-items: center; justify-content: center; }
+.transcript-panel { background: #fff; border-radius: 10px; width: 90vw; max-width: 900px; height: 80vh; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+.transcript-header { padding: 14px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 12px; }
+.transcript-header h3 { flex: 1; font-size: 1em; }
+.transcript-close { font-size: 1.5em; cursor: pointer; color: #999; background: none; border: none; padding: 0 8px; }
+.transcript-close:hover { color: #333; }
+.transcript-body { flex: 1; overflow: auto; padding: 16px 20px; font-family: "SF Mono", Consolas, "Courier New", monospace; font-size: .85em; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: #f8f8f8; }
+.transcript-body .cmd { color: #0066cc; font-weight: 700; }
+.transcript-body .cmd-err { color: #cc0000; font-weight: 700; }
+.transcript-body .err-line { color: #cc0000; background: #fff0f0; }
+
+/* No results state */
+.no-results { color: #999; font-style: italic; padding: 8px 0; }
+</style>
+</head>
+<body>
+
+<h1>I7 Testing Dashboard</h1>
+<p class="subtitle">Run tests, view results, drill into transcripts</p>
+
+<div class="game-grid" id="games"></div>
+
+<div class="transcript-overlay" id="transcriptOverlay">
+  <div class="transcript-panel">
+    <div class="transcript-header">
+      <h3 id="transcriptTitle">Transcript</h3>
+      <div style="display:flex;gap:6px;">
+        <button class="btn" id="btnCombo" onclick="showMode('combo')" style="font-size:.8em">Combo</button>
+        <button class="btn" id="btnTranscript" onclick="showMode('transcript')" style="font-size:.8em">Transcript</button>
+        <button class="btn" id="btnCommands" onclick="showMode('commands')" style="font-size:.8em">Commands</button>
+        <button class="btn" id="btnAssertions" onclick="showMode('assertions')" style="font-size:.8em">Assertions</button>
+      </div>
+      <button class="transcript-close" onclick="closeTranscript()">&times;</button>
+    </div>
+    <div class="transcript-body" id="transcriptBody"></div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let gamesData = [];
+let expandedGame = null;
+let pollTimers = {};
+
+async function fetchGames() {
+  try {
+    const res = await fetch(API + '/api/games');
+    gamesData = await res.json();
+    render();
+  } catch (err) {
+    document.getElementById('games').innerHTML =
+      `<div style="color:red;padding:20px;">Error loading games: ${err.message}<br>
+       Check that the dashboard server is running.</div>`;
+  }
+}
+
+function badgeClass(status) {
+  if (status === 'pass') return 'badge-pass';
+  if (status === 'fail') return 'badge-fail';
+  if (status === 'running') return 'badge-running';
+  return 'badge-skip';
+}
+
+function badgeLabel(status) {
+  if (status === 'pass') return 'PASS';
+  if (status === 'fail') return 'FAIL';
+  if (status === 'running') return 'RUNNING...';
+  return 'SKIP';
+}
+
+function render() {
+  const el = document.getElementById('games');
+  el.innerHTML = gamesData.map(g => renderGame(g)).join('');
+}
+
+function renderGame(g) {
+  const r = g.results;
+  const layers = r ? r.layers || {} : {};
+  const isExpanded = expandedGame === g.name;
+
+  // Build layer badges from results
+  let badges = '';
+  for (const [name, lr] of Object.entries(layers)) {
+    const st = lr.status || 'skip';
+    let label = name;
+    if (lr.total != null) label += ` ${lr.passed}/${lr.total}`;
+    badges += `<span class="badge ${badgeClass(st)}">${label}</span>`;
+  }
+  if (!badges && !r) {
+    badges = '<span class="badge badge-skip">no results</span>';
+  }
+
+  // Win count
+  let winBadge = '';
+  const sc = layers.scenarios;
+  if (sc && sc.wins > 0) {
+    winBadge = `<span class="win-count">${sc.wins} win-path${sc.wins > 1 ? 's' : ''}</span>`;
+  }
+
+  // Assertion count
+  let assertBadge = '';
+  if (sc && sc.assertions && sc.assertions.total > 0) {
+    const a = sc.assertions;
+    const cls = a.failed > 0 ? 'assert-fail' : 'assert-count';
+    assertBadge = `<span class="${cls}">${a.passed}/${a.total} assertions</span>`;
+  }
+
+  let ts = '';
+  if (r && r.timestamp) {
+    const d = new Date(r.timestamp);
+    ts = `<span class="timestamp">${d.toLocaleString()}</span>`;
+  }
+
+  let detail = '';
+  if (isExpanded) {
+    detail = renderDetail(g);
+  }
+
+  return `
+    <div class="game-card ${isExpanded ? 'expanded' : ''}">
+      <div class="game-header" onclick="toggleGame('${g.name}')">
+        <span class="game-name">${g.name}</span>
+        <div class="layer-badges">${badges} ${winBadge} ${assertBadge} ${ts}</div>
+        <div class="game-actions">
+          <button class="btn btn-run" onclick="event.stopPropagation(); runTests('${g.name}')"
+                  ${!g.has_scenarios ? 'disabled title="No scenario file"' : ''}>Run All</button>
+        </div>
+      </div>
+      <div class="game-detail">${detail}</div>
+    </div>`;
+}
+
+function renderDetail(g) {
+  const r = g.results;
+  if (!r) return '<p class="no-results">No test results yet. Click "Run All" to generate.</p>';
+
+  const layers = r.layers || {};
+  let html = '';
+
+  // Scenarios (unified: assertions + diagnostics)
+  if (layers.scenarios) {
+    const l = layers.scenarios;
+    const a = l.assertions || {};
+    html += `<div class="layer-section">
+      <div class="layer-title">Scenarios
+        <span class="badge ${badgeClass(l.status)}">${l.passed != null ? l.passed + '/' + l.total : badgeLabel(l.status)}</span>
+        ${l.wins ? `<span class="win-count">${l.wins} win-path${l.wins > 1 ? 's' : ''}</span>` : ''}
+        ${a.total ? `<span class="${a.failed > 0 ? 'assert-fail' : 'assert-count'}">${a.passed}/${a.total} assertions</span>` : ''}
+        ${l.primary_walkthrough ? `<span class="primary-tag">Primary: ${l.primary_walkthrough}</span>` : ''}
+        <button class="btn" onclick="event.stopPropagation(); runTests('${g.name}', 'scenarios')">Run</button>
+      </div>`;
+    html += renderScenarioTable(g);
+    html += '</div>';
+  }
+
+  // Show global seed from scenario results
+  let seedInfo = '';
+  const scDetail = g._scenarioDetails;
+  if (scDetail && scDetail.length > 0 && scDetail[0].seed) {
+    seedInfo = ` | Global seed: <span class="seed">${esc(String(scDetail[0].seed))}</span>`;
+  }
+  html += `<p class="timestamp">Report: ${r.timestamp} | Binary: ${r.binary_hash || '?'}${seedInfo} | Duration: ${r.duration_seconds}s</p>`;
+  return html;
+}
+
+function renderScenarioTable(g) {
+  const scenarios = g._scenarioDetails;
+  if (!scenarios) {
+    loadScenarioDetails(g.name);
+    return '<p class="no-results">Loading scenario details...</p>';
+  }
+
+  let rows = '';
+  let currentCat = '';
+  for (const s of scenarios) {
+    if (s.category && s.category !== currentCat) {
+      currentCat = s.category;
+      rows += `<tr><td colspan="9" style="padding-top:12px;font-weight:700;font-size:.85em;color:#666;border:none;">${esc(currentCat)}</td></tr>`;
+    }
+
+    // Determine row class
+    const a = s.assertions || {};
+    let rowClass = '';
+    if (s.win) rowClass = 'row-win';
+    else if (s.status === 'fail') rowClass = 'row-fail';
+    else if (a.failed > 0) rowClass = 'row-assert-fail';
+
+    // Assertion cell
+    let assertCell = '';
+    if (a.total > 0) {
+      if (a.failed > 0) {
+        assertCell = `<span class="assert-fail">${a.passed}/${a.total}</span>`;
+      } else {
+        assertCell = `<span class="assert-pass">${a.passed}/${a.total}</span>`;
+      }
+    }
+
+    rows += `<tr class="${rowClass}">
+      <td><span class="scenario-name" onclick="showTranscript('${g.name}', '${s.name}')">${esc(s.name)}</span>
+          ${s.primary ? '<span class="primary-tag">PRIMARY</span>' : ''}</td>
+      <td>${s.title ? esc(s.title) : ''}</td>
+      <td><span class="badge ${badgeClass(s.status)}" style="font-size:.72em">${s.win ? 'WIN' : badgeLabel(s.status)}</span></td>
+      <td>${assertCell}</td>
+      <td class="score">${s.score || ''}</td>
+      <td class="seed">${s.seed ? esc(String(s.seed)) : ''}</td>
+      <td>${s.deaths ? '<span class="deaths">' + s.deaths + ' deaths</span>' : ''}</td>
+      <td>${s.errors ? '<span class="errors">' + s.errors + ' errors</span>' : ''}</td>
+      <td style="color:#999;font-size:.85em">${s.commands} cmds</td>
+    </tr>`;
+
+    // Show assertion failures inline if any
+    if (a.failures && a.failures.length > 0) {
+      rows += `<tr class="row-assert-fail"><td colspan="9" style="padding:4px 10px 8px 30px;">`;
+      for (const f of a.failures) {
+        rows += `<div class="assert-detail">${esc(f)}</div>`;
+      }
+      rows += `</td></tr>`;
+    }
+  }
+
+  return `<table class="scenario-table">
+    <thead><tr><th>Scenario</th><th>Title</th><th>Status</th><th>Assertions</th><th>Score</th><th>Seed</th><th>Deaths</th><th>Errors</th><th>Size</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+async function loadScenarioDetails(gameName) {
+  const res = await fetch(API + `/api/results?game=${gameName}`);
+  const data = await res.json();
+  if (!data) return;
+
+  const game = gamesData.find(g => g.name === gameName);
+  if (!game) return;
+
+  if (data.scenarios) {
+    game._scenarioDetails = data.scenarios;
+    render();
+    return;
+  }
+
+  const index = game.scenario_index;
+  if (index && index.scenarios) {
+    game._scenarioDetails = index.scenarios.map(s => ({
+      ...s,
+      status: 'pass',
+      score: '',
+      deaths: 0,
+      errors: 0,
+      commands: 0,
+      assertions: { total: 0, passed: 0, failed: 0, failures: [] },
+    }));
+  }
+  render();
+}
+
+function toggleGame(name) {
+  expandedGame = expandedGame === name ? null : name;
+  render();
+  if (expandedGame === name) {
+    const game = gamesData.find(g => g.name === name);
+    if (game && !game._scenarioDetails) {
+      loadScenarioDetails(name);
+    }
+  }
+}
+
+async function runTests(gameName, layer) {
+  let url = API + `/api/run?game=${gameName}`;
+  if (layer) url += `&layer=${layer}`;
+  await fetch(url, { method: 'POST' });
+
+  const game = gamesData.find(g => g.name === gameName);
+  if (game) {
+    if (!game.results) game.results = { layers: {}, overall: 'running' };
+    if (layer) {
+      game.results.layers[layer] = { status: 'running' };
+    } else {
+      game.results.overall = 'running';
+      for (const k of Object.keys(game.results.layers)) {
+        game.results.layers[k] = { status: 'running' };
+      }
+    }
+  }
+  render();
+  pollForCompletion(gameName);
+}
+
+function pollForCompletion(gameName) {
+  if (pollTimers[gameName]) clearInterval(pollTimers[gameName]);
+  pollTimers[gameName] = setInterval(async () => {
+    const res = await fetch(API + `/api/status?game=${gameName}`);
+    const data = await res.json();
+    if (data.status === 'done') {
+      clearInterval(pollTimers[gameName]);
+      delete pollTimers[gameName];
+      const game = gamesData.find(g => g.name === gameName);
+      if (game) {
+        game._scenarioDetails = null;
+      }
+      await fetchGames();
+      expandedGame = gameName;
+      render();
+    }
+  }, 1000);
+}
+
+let _viewerGame = '';
+let _viewerScenario = '';
+let _viewerMode = 'transcript';
+
+async function showTranscript(gameName, scenarioName) {
+  _viewerGame = gameName;
+  _viewerScenario = scenarioName;
+  _viewerMode = 'combo';
+  document.getElementById('transcriptTitle').textContent = `${gameName} / ${scenarioName}`;
+  document.getElementById('transcriptBody').textContent = 'Loading...';
+  document.getElementById('transcriptOverlay').classList.add('visible');
+  updateModeButtons();
+  await loadViewerContent();
+}
+
+async function showMode(mode) {
+  _viewerMode = mode;
+  updateModeButtons();
+  await loadViewerContent();
+}
+
+function updateModeButtons() {
+  for (const id of ['btnCombo', 'btnTranscript', 'btnCommands', 'btnAssertions']) {
+    const btn = document.getElementById(id);
+    const mode = id.replace('btn', '').toLowerCase();
+    btn.style.fontWeight = _viewerMode === mode ? '700' : '400';
+    btn.style.background = _viewerMode === mode ? '#e8e8e8' : '';
+  }
+}
+
+async function loadViewerContent() {
+  if (_viewerMode === 'assertions') {
+    loadAssertionsView();
+    return;
+  }
+  if (_viewerMode === 'combo') {
+    await loadComboView();
+    return;
+  }
+
+  const endpoint = _viewerMode === 'commands' ? 'commands' : 'transcript';
+  const res = await fetch(API + `/api/${endpoint}?game=${_viewerGame}&scenario=${_viewerScenario}`);
+  if (res.ok) {
+    const text = await res.text();
+    if (_viewerMode === 'commands') {
+      const numbered = text.trim().split('\n').map((line, i) =>
+        `<span style="color:#999;user-select:none">${String(i+1).padStart(3)}.</span> ${esc(line)}`
+      ).join('\n');
+      document.getElementById('transcriptBody').innerHTML = numbered;
+    } else {
+      const errPatterns = /can't see any such thing|can't go that way|that's not something you can|I only understood|You can't see any such thing|I didn't understand/i;
+      const lines = text.split('\n');
+      const isErr = lines.map(l => errPatterns.test(l));
+      const cmdIsErr = lines.map(() => false);
+      for (let i = 0; i < lines.length; i++) {
+        if (isErr[i]) {
+          for (let j = i - 1; j >= 0; j--) {
+            if (lines[j].match(/^> /)) {
+              cmdIsErr[j] = true;
+              break;
+            }
+          }
+        }
+      }
+      const highlighted = lines.map((line, i) => {
+        if (line.match(/^> /) && cmdIsErr[i]) {
+          return '<span class="cmd-err">' + esc(line) + '</span>';
+        }
+        if (line.match(/^> /)) {
+          return '<span class="cmd">' + esc(line) + '</span>';
+        }
+        if (isErr[i]) {
+          return '<span class="err-line">' + esc(line) + '</span>';
+        }
+        return esc(line);
+      }).join('\n');
+      document.getElementById('transcriptBody').innerHTML = highlighted;
+    }
+  } else {
+    document.getElementById('transcriptBody').textContent =
+      _viewerMode === 'commands'
+        ? 'Commands file not found. Run the scenario first.'
+        : 'Transcript not found. Run the scenario first.';
+  }
+}
+
+async function loadComboView() {
+  // Fetch transcript
+  const res = await fetch(API + `/api/transcript?game=${_viewerGame}&scenario=${_viewerScenario}`);
+  if (!res.ok) {
+    document.getElementById('transcriptBody').textContent = 'Transcript not found. Run the scenario first.';
+    return;
+  }
+  const transcript = await res.text();
+
+  // Get assertion details from cached scenario data
+  const game = gamesData.find(g => g.name === _viewerGame);
+  const scenario = game && game._scenarioDetails
+    ? game._scenarioDetails.find(s => s.name === _viewerScenario) : null;
+  const details = scenario && scenario.assertions ? scenario.assertions.details || [] : [];
+
+  // Build a lookup: command text -> list of assertion details
+  // Group assertions by their command
+  const assertsByCmd = {};
+  for (const d of details) {
+    const key = d.command || '';
+    if (!assertsByCmd[key]) assertsByCmd[key] = [];
+    assertsByCmd[key].push(d);
+  }
+
+  const errPatterns = /can't see any such thing|can't go that way|that's not something you can|I only understood|You can't see any such thing|I didn't understand/i;
+  const lines = transcript.split('\n');
+
+  // Track which command we're on so we can insert assertions after each
+  let html = '';
+  let currentCmd = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isCmd = line.match(/^> (.+)/);
+    const isErr = errPatterns.test(line);
+
+    // If we hit a new command, first flush assertions from the previous command
+    if (isCmd && currentCmd && assertsByCmd[currentCmd]) {
+      html += renderInlineAssertions(assertsByCmd[currentCmd]);
+      delete assertsByCmd[currentCmd]; // only show once
+    }
+
+    // Render the transcript line
+    if (isCmd) {
+      currentCmd = isCmd[1];
+      // Check if any assertion for this command failed
+      const cmdAsserts = assertsByCmd[currentCmd] || [];
+      const hasFail = cmdAsserts.some(a => !a.passed);
+      if (hasFail) {
+        html += '<span class="cmd-err">' + esc(line) + '</span>\n';
+      } else {
+        html += '<span class="cmd">' + esc(line) + '</span>\n';
+      }
+    } else if (isErr) {
+      html += '<span class="err-line">' + esc(line) + '</span>\n';
+    } else {
+      html += esc(line) + '\n';
+    }
+  }
+
+  // Flush assertions for the last command
+  if (currentCmd && assertsByCmd[currentCmd]) {
+    html += renderInlineAssertions(assertsByCmd[currentCmd]);
+  }
+
+  // Show any preamble assertions (command = "(preamble)")
+  if (assertsByCmd['(preamble)']) {
+    // These should appear at the top, but since we process linearly,
+    // prepend them if they weren't already shown
+    const preambleHtml = renderInlineAssertions(assertsByCmd['(preamble)']);
+    // Find the first command line and insert before it
+    const firstCmdIdx = html.indexOf('<span class="cmd');
+    if (firstCmdIdx > 0) {
+      html = html.slice(0, firstCmdIdx) + preambleHtml + html.slice(firstCmdIdx);
+    }
+  }
+
+  document.getElementById('transcriptBody').innerHTML = html;
+}
+
+function renderInlineAssertions(asserts) {
+  if (!asserts || asserts.length === 0) return '';
+  let html = '<div style="margin:2px 0 4px 0;padding:2px 0;">';
+  for (const a of asserts) {
+    if (a.passed) {
+      html += `<div style="padding:1px 0 1px 12px;color:#155724;font-size:.88em;border-left:3px solid #28a745;">`;
+      html += `<b>PASS</b> ${esc(a.check)}</div>`;
+    } else {
+      html += `<div style="padding:1px 0 1px 12px;color:#721c24;font-size:.88em;background:#fff5f5;border-left:3px solid #dc3545;">`;
+      html += `<b>FAIL</b> ${esc(a.check)}`;
+      if (a.detail) html += ` <span style="color:#856404;font-size:.9em;">(${esc(a.detail)})</span>`;
+      html += `</div>`;
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+function loadAssertionsView() {
+  // Find scenario data from cached details
+  const game = gamesData.find(g => g.name === _viewerGame);
+  if (!game || !game._scenarioDetails) {
+    document.getElementById('transcriptBody').textContent = 'No assertion data available.';
+    return;
+  }
+  const scenario = game._scenarioDetails.find(s => s.name === _viewerScenario);
+  if (!scenario || !scenario.assertions) {
+    document.getElementById('transcriptBody').textContent = 'No assertion data for this scenario.';
+    return;
+  }
+
+  const a = scenario.assertions;
+  let html = `<div style="margin-bottom:16px;font-size:1.1em;font-family:inherit;">`;
+  if (a.failed > 0) {
+    html += `<span class="assert-fail">${a.passed}/${a.total} passed (${a.failed} failed)</span>`;
+  } else {
+    html += `<span class="assert-pass">${a.passed}/${a.total} passed</span>`;
+  }
+  html += `</div>`;
+
+  if (a.details && a.details.length > 0) {
+    let lastCmd = '';
+    for (const d of a.details) {
+      // Show command header with response when command changes
+      const cmdLabel = d.command || `cmd ${d.cmd_idx}`;
+      if (cmdLabel !== lastCmd) {
+        lastCmd = cmdLabel;
+        html += `<div style="margin-top:14px;margin-bottom:2px;font-weight:700;color:#0066cc;font-size:.95em;">&gt; ${esc(cmdLabel)}</div>`;
+        // Show the game's response text
+        if (d.response) {
+          html += `<div style="padding:4px 0 4px 16px;color:#555;font-size:.88em;border-left:2px solid #ddd;margin-bottom:4px;white-space:pre-wrap;">${esc(d.response)}</div>`;
+        }
+      }
+      // Show check result
+      if (d.passed) {
+        html += `<div style="padding:3px 0 3px 16px;color:#155724;border-left:3px solid #28a745;">`;
+        html += `<span style="font-weight:600;">PASS</span> expected: <code>${esc(d.check)}</code>`;
+        html += `</div>`;
+      } else {
+        html += `<div style="padding:3px 0 3px 16px;color:#721c24;background:#fff5f5;border-left:3px solid #dc3545;">`;
+        html += `<span style="font-weight:700;">FAIL</span> expected: <code>${esc(d.check)}</code>`;
+        if (d.detail) {
+          html += `<div style="font-size:.9em;color:#856404;margin-top:2px;">${esc(d.detail)}</div>`;
+        }
+        html += `</div>`;
+      }
+    }
+  } else if (a.failures && a.failures.length > 0) {
+    // Fallback for older data without details
+    html += `<div style="font-weight:700;color:#721c24;margin-bottom:8px;">Failures:</div>`;
+    for (const f of a.failures) {
+      html += `<div class="assert-detail" style="padding:4px 0;border-bottom:1px solid #f0f0f0;">${esc(f)}</div>`;
+    }
+  } else if (a.total === 0) {
+    html += '<div style="color:#666;">No assertions defined for this scenario.</div>';
+  } else {
+    html += '<div style="color:#155724;">All assertions passed.</div>';
+  }
+
+  document.getElementById('transcriptBody').innerHTML = html;
+}
+
+function closeTranscript() {
+  document.getElementById('transcriptOverlay').classList.remove('visible');
+}
+
+// Close on overlay click or Escape
+document.getElementById('transcriptOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeTranscript();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeTranscript();
+});
+
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Boot
+fetchGames();
+</script>
+</body>
+</html>

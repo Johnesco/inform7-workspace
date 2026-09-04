@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Map — __TITLE__</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: #0a0a0a;
+  color: #d4c5a9;
+  font-family: Georgia, "Times New Roman", serif;
+  overflow: hidden;
+}
+
+/* --- Layout --- */
+.container {
+  display: flex;
+  height: 100%;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: #0e0e0c;
+  border-right: 1px solid #1e1a14;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #1e1a14;
+}
+
+.sidebar-header h1 {
+  font-size: 0.95em;
+  color: #c4b48a;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.sidebar-header a {
+  font-size: 0.8em;
+  color: #887755;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.sidebar-header a:hover {
+  color: #aa9966;
+  border-bottom-color: #aa9966;
+}
+
+.stats {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e1a14;
+  font-size: 0.8em;
+  color: #776655;
+  line-height: 1.6;
+}
+
+.stats strong {
+  color: #aa9966;
+}
+
+.room-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.room-list::-webkit-scrollbar { width: 6px; }
+.room-list::-webkit-scrollbar-track { background: #0e0e0c; }
+.room-list::-webkit-scrollbar-thumb { background: #2a2418; border-radius: 3px; }
+
+.room-item {
+  display: block;
+  padding: 6px 16px;
+  font-size: 0.85em;
+  color: #998866;
+  text-decoration: none;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.1s, color 0.1s;
+}
+
+.room-item:hover {
+  background: #151510;
+  color: #c4b48a;
+}
+
+.room-item.active {
+  background: #18160f;
+  color: #e8d090;
+  border-left-color: #e8d090;
+}
+
+.room-item .visit-count {
+  font-size: 0.8em;
+  color: #554433;
+  margin-left: 4px;
+}
+
+.room-item.start-room::before {
+  content: "\25B6 ";
+  font-size: 0.7em;
+  color: #8bab6e;
+}
+
+/* --- Map area --- */
+.map-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #0a0a0a;
+}
+
+.map-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.map-toolbar button {
+  background: #1a1810;
+  border: 1px solid #2a2418;
+  border-radius: 4px;
+  color: #887755;
+  font-family: "SF Mono", "Fira Code", Consolas, "Courier New", monospace;
+  font-size: 0.85em;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.map-toolbar button:hover {
+  background: #2a2010;
+  color: #c4b48a;
+  border-color: #4a3a20;
+}
+
+.map-svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.map-svg:active {
+  cursor: grabbing;
+}
+
+/* SVG room styling */
+.map-svg .room-box {
+  cursor: pointer;
+}
+
+.map-svg .room-box rect {
+  transition: stroke 0.15s, fill 0.15s;
+}
+
+.map-svg .room-box:hover rect {
+  stroke: #aa9966;
+  fill: #2a2418;
+}
+
+.map-svg .room-box.highlighted rect {
+  stroke: #e8d090;
+  fill: #2a2418;
+  stroke-width: 2;
+}
+
+.map-svg .room-box.start rect {
+  stroke: #8bab6e;
+}
+
+.map-svg .edge-line {
+  transition: stroke 0.15s;
+}
+
+.map-svg .edge-line.highlighted {
+  stroke: #e8d090 !important;
+  stroke-width: 2;
+}
+
+/* --- Floor labels --- */
+.floor-label {
+  font-family: Georgia, serif;
+  font-size: 12px;
+  fill: #554433;
+  font-style: italic;
+}
+
+/* --- Tooltip --- */
+.tooltip {
+  position: absolute;
+  background: #1a1810;
+  border: 1px solid #3a3020;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.8em;
+  color: #d4c5a9;
+  pointer-events: none;
+  z-index: 20;
+  max-width: 300px;
+  display: none;
+}
+
+.tooltip .tt-name {
+  color: #e8d8b0;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.tooltip .tt-desc {
+  color: #998866;
+  font-size: 0.9em;
+  line-height: 1.3;
+}
+
+/* --- Responsive --- */
+@media (max-width: 700px) {
+  .sidebar { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>Map</h1>
+      <a href="__BACK_HREF__">&larr; __TITLE__</a>
+    </div>
+    <div class="stats">
+      <strong>__ROOM_COUNT__</strong> rooms &middot; <strong>__EDGE_COUNT__</strong> connections
+    </div>
+    <div class="room-list" id="room-list"></div>
+  </div>
+
+  <div class="map-area">
+    <div class="map-toolbar">
+      <button id="btn-zoom-in" title="Zoom in (+)">+</button>
+      <button id="btn-zoom-out" title="Zoom out (-)">−</button>
+      <button id="btn-reset" title="Reset view (R)">Reset</button>
+    </div>
+    <svg class="map-svg" id="map-svg">
+      __SVG_CONTENT__
+    </svg>
+    <div class="tooltip" id="tooltip">
+      <div class="tt-name"></div>
+      <div class="tt-desc"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var MAP_DATA = __MAP_DATA__;
+
+/* --- Pan & Zoom --- */
+var svg = document.getElementById('map-svg');
+var vb = MAP_DATA.viewBox; // [x, y, w, h]
+var viewBox = { x: vb[0], y: vb[1], w: vb[2], h: vb[3] };
+var origVB = { x: vb[0], y: vb[1], w: vb[2], h: vb[3] };
+var isPanning = false;
+var panStart = { x: 0, y: 0 };
+var panVBStart = { x: 0, y: 0 };
+
+function applyViewBox() {
+  svg.setAttribute('viewBox', viewBox.x + ' ' + viewBox.y + ' ' + viewBox.w + ' ' + viewBox.h);
+}
+applyViewBox();
+
+svg.addEventListener('mousedown', function(e) {
+  if (e.target.closest('.room-box')) return;
+  isPanning = true;
+  panStart = { x: e.clientX, y: e.clientY };
+  panVBStart = { x: viewBox.x, y: viewBox.y };
+});
+
+window.addEventListener('mousemove', function(e) {
+  if (!isPanning) return;
+  var rect = svg.getBoundingClientRect();
+  var scaleX = viewBox.w / rect.width;
+  var scaleY = viewBox.h / rect.height;
+  viewBox.x = panVBStart.x - (e.clientX - panStart.x) * scaleX;
+  viewBox.y = panVBStart.y - (e.clientY - panStart.y) * scaleY;
+  applyViewBox();
+});
+
+window.addEventListener('mouseup', function() { isPanning = false; });
+
+svg.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  var rect = svg.getBoundingClientRect();
+  var mx = (e.clientX - rect.left) / rect.width;
+  var my = (e.clientY - rect.top) / rect.height;
+  var factor = e.deltaY > 0 ? 1.15 : 0.87;
+  var newW = viewBox.w * factor;
+  var newH = viewBox.h * factor;
+  viewBox.x += (viewBox.w - newW) * mx;
+  viewBox.y += (viewBox.h - newH) * my;
+  viewBox.w = newW;
+  viewBox.h = newH;
+  applyViewBox();
+}, { passive: false });
+
+function zoomBy(factor) {
+  var cx = viewBox.x + viewBox.w / 2;
+  var cy = viewBox.y + viewBox.h / 2;
+  viewBox.w *= factor;
+  viewBox.h *= factor;
+  viewBox.x = cx - viewBox.w / 2;
+  viewBox.y = cy - viewBox.h / 2;
+  applyViewBox();
+}
+
+function resetView() {
+  viewBox = { x: origVB.x, y: origVB.y, w: origVB.w, h: origVB.h };
+  applyViewBox();
+}
+
+document.getElementById('btn-zoom-in').addEventListener('click', function() { zoomBy(0.75); });
+document.getElementById('btn-zoom-out').addEventListener('click', function() { zoomBy(1.33); });
+document.getElementById('btn-reset').addEventListener('click', resetView);
+
+/* --- Room list --- */
+var roomList = document.getElementById('room-list');
+var rooms = MAP_DATA.rooms;
+var edges = MAP_DATA.edges;
+
+rooms.sort(function(a, b) {
+  if (a.id === MAP_DATA.startRoom) return -1;
+  if (b.id === MAP_DATA.startRoom) return 1;
+  return a.name.localeCompare(b.name);
+});
+
+var html = '';
+for (var i = 0; i < rooms.length; i++) {
+  var r = rooms[i];
+  var cls = 'room-item' + (r.id === MAP_DATA.startRoom ? ' start-room' : '');
+  html += '<div class="' + cls + '" data-room="' + r.id + '">';
+  html += esc(r.name);
+  if (r.visits > 1) html += '<span class="visit-count">(' + r.visits + 'x)</span>';
+  html += '</div>';
+}
+roomList.innerHTML = html;
+
+/* --- Click room in sidebar --- */
+roomList.addEventListener('click', function(e) {
+  var item = e.target.closest('.room-item');
+  if (!item) return;
+  var roomId = item.dataset.room;
+  highlightRoom(roomId);
+  centerOnRoom(roomId);
+});
+
+/* --- Click room in SVG --- */
+svg.addEventListener('click', function(e) {
+  var box = e.target.closest('.room-box');
+  if (!box) return;
+  var roomId = box.dataset.room;
+  highlightRoom(roomId);
+  // Scroll sidebar
+  var sideItem = roomList.querySelector('[data-room="' + roomId + '"]');
+  if (sideItem) sideItem.scrollIntoView({ block: 'nearest' });
+});
+
+/* --- Tooltip --- */
+var tooltip = document.getElementById('tooltip');
+
+svg.addEventListener('mouseover', function(e) {
+  var box = e.target.closest('.room-box');
+  if (!box) { tooltip.style.display = 'none'; return; }
+  var roomId = box.dataset.room;
+  var room = MAP_DATA.rooms.find(function(r) { return r.id === roomId; });
+  if (!room) return;
+  tooltip.querySelector('.tt-name').textContent = room.name;
+  var desc = room.description || '';
+  if (desc.length > 120) desc = desc.slice(0, 120) + '...';
+  tooltip.querySelector('.tt-desc').textContent = desc;
+  tooltip.style.display = 'block';
+});
+
+svg.addEventListener('mousemove', function(e) {
+  if (tooltip.style.display === 'block') {
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY + 12) + 'px';
+  }
+});
+
+svg.addEventListener('mouseout', function(e) {
+  if (!e.target.closest('.room-box')) tooltip.style.display = 'none';
+});
+
+/* --- Highlight --- */
+var activeRoom = null;
+
+function highlightRoom(roomId) {
+  // Clear previous
+  svg.querySelectorAll('.room-box.highlighted').forEach(function(el) { el.classList.remove('highlighted'); });
+  svg.querySelectorAll('.edge-line.highlighted').forEach(function(el) { el.classList.remove('highlighted'); });
+  roomList.querySelectorAll('.room-item.active').forEach(function(el) { el.classList.remove('active'); });
+
+  if (activeRoom === roomId) { activeRoom = null; return; }
+  activeRoom = roomId;
+
+  // Highlight room box
+  var box = svg.querySelector('.room-box[data-room="' + roomId + '"]');
+  if (box) box.classList.add('highlighted');
+
+  // Highlight sidebar
+  var sideItem = roomList.querySelector('[data-room="' + roomId + '"]');
+  if (sideItem) sideItem.classList.add('active');
+
+  // Highlight connected edges
+  svg.querySelectorAll('.edge-line').forEach(function(el) {
+    if (el.dataset.from === roomId || el.dataset.to === roomId) {
+      el.classList.add('highlighted');
+    }
+  });
+}
+
+function centerOnRoom(roomId) {
+  var room = MAP_DATA.rooms.find(function(r) { return r.id === roomId; });
+  if (!room) return;
+  viewBox.x = room.cx - viewBox.w / 2;
+  viewBox.y = room.cy - viewBox.h / 2;
+  applyViewBox();
+}
+
+/* --- Keyboard --- */
+document.addEventListener('keydown', function(e) {
+  var panAmt = viewBox.w * 0.1;
+  if (e.key === 'ArrowLeft') { viewBox.x -= panAmt; applyViewBox(); }
+  else if (e.key === 'ArrowRight') { viewBox.x += panAmt; applyViewBox(); }
+  else if (e.key === 'ArrowUp') { viewBox.y -= panAmt; applyViewBox(); }
+  else if (e.key === 'ArrowDown') { viewBox.y += panAmt; applyViewBox(); }
+  else if (e.key === '+' || e.key === '=') { zoomBy(0.8); }
+  else if (e.key === '-') { zoomBy(1.25); }
+  else if (e.key === 'r' || e.key === 'R') { resetView(); }
+});
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+</script>
+
+</body>
+</html>
