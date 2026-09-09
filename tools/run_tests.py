@@ -574,6 +574,9 @@ def run_scenario(name, tests, cfg, seed, scenarios_dir):
     scenarios_dir.mkdir(parents=True, exist_ok=True)
     transcript_path = scenarios_dir / f"{name}.transcript.txt"
     commands_path = scenarios_dir / f"{name}.commands.txt"
+    # The banner carries the compile date as the serial number; normalise it so
+    # tracked transcripts do not change on every rebuild (Johnesco/zork1#180).
+    transcript = re.sub(r"(Serial number )\d{6}", r"\1XXXXXX", transcript)
     transcript_path.write_text(transcript, encoding="utf-8")
     commands_path.write_text("\n".join(commands) + "\n", encoding="utf-8")
 
