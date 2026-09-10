@@ -262,6 +262,24 @@ class DiagConfig:
     death_patterns: str = "you have died"
     won_patterns: str = "You have won"
     scoreless: bool = False
+    # Parser-error wording is dialect-specific: Inform 7 says "You can't see any
+    # such thing", the Infocom/ZIL parser says "You can't see any troll here!".
+    # The alt_* variants are used for --alt runs and fall back to the primary
+    # patterns when left empty, so single-engine projects need set nothing.
+    unknown_object: str = "can't see any such thing"
+    bad_exit: str = "can't go that way"
+    other_error: str = "that.s not something you can|I only understood"
+    alt_unknown_object: str = ""
+    alt_bad_exit: str = ""
+    alt_other_error: str = ""
+
+    def errors_for(self, alt: bool) -> tuple[str, str, str]:
+        """(unknown-object, bad-exit, other) patterns for the engine in use."""
+        if alt:
+            return (self.alt_unknown_object or self.unknown_object,
+                    self.alt_bad_exit or self.bad_exit,
+                    self.alt_other_error or self.other_error)
+        return (self.unknown_object, self.bad_exit, self.other_error)
 
 
 @dataclass
@@ -398,6 +416,13 @@ def load_config(conf_path: Path | str) -> ProjectConfig:
     cfg.diagnostics.death_patterns = kv.get("DEATH_PATTERNS", cfg.diagnostics.death_patterns)
     cfg.diagnostics.won_patterns = kv.get("WON_PATTERNS", cfg.diagnostics.won_patterns)
     cfg.diagnostics.scoreless = kv.get("SCORELESS_GAME", "").lower() == "true"
+    d = cfg.diagnostics
+    d.unknown_object = kv.get("ERROR_UNKNOWN_OBJECT", d.unknown_object)
+    d.bad_exit = kv.get("ERROR_BAD_EXIT", d.bad_exit)
+    d.other_error = kv.get("ERROR_OTHER", d.other_error)
+    d.alt_unknown_object = kv.get("ALT_ERROR_UNKNOWN_OBJECT", d.alt_unknown_object)
+    d.alt_bad_exit = kv.get("ALT_ERROR_BAD_EXIT", d.alt_bad_exit)
+    d.alt_other_error = kv.get("ALT_ERROR_OTHER", d.alt_other_error)
 
     # RegTest
     cfg.regtest_file = kv.get("REGTEST_FILE", "")
