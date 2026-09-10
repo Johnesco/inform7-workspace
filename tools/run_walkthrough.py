@@ -37,7 +37,12 @@ def compute_sha256_prefix(path: Path, length: int = 8) -> str:
 
 
 def load_diagnostics_extra(project_dir: Path):
-    """Try to load a project_hooks.py with diagnostics_extra(), or fall back to bash-style."""
+    """Return a diagnostics_extra(transcript) hook, or None.
+
+    Prefers tests/project_hooks.py. Falls back to a diagnostics_extra() shell
+    function in project.conf, which is how projects declared this before the
+    Python runner; without the fallback those definitions are silently dead.
+    """
     hooks_path = project_dir / "tests" / "project_hooks.py"
     if hooks_path.exists():
         spec = importlib.util.spec_from_file_location("project_hooks", hooks_path)
@@ -46,7 +51,31 @@ def load_diagnostics_extra(project_dir: Path):
             spec.loader.exec_module(mod)
             if hasattr(mod, "diagnostics_extra"):
                 return mod.diagnostics_extra
-    return None
+
+    conf = project_dir / "tests" / "project.conf"
+    if not conf.exists() or "diagnostics_extra()" not in conf.read_text(encoding="utf-8", errors="replace"):
+        return None
+
+    def run_bash_hook(transcript: str) -> None:
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False,
+                                         encoding="utf-8", errors="replace") as fh:
+            fh.write(transcript)
+            tmp = fh.name
+        try:
+            script = (f'PROJECT_DIR="{project_dir.as_posix()}"; export PROJECT_DIR; '
+                      f'. "{conf.as_posix()}" >/dev/null 2>&1; diagnostics_extra "{tmp}"')
+            proc = process.run_bash(script) if hasattr(process, "run_bash") else None
+            if proc is None:
+                import subprocess
+                proc = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+            if proc.stdout:
+                print(proc.stdout.rstrip())
+        except (OSError, ValueError):
+            pass
+        finally:
+            Path(tmp).unlink(missing_ok=True)
+
+    return run_bash_hook
 
 
 def main():
@@ -153,9 +182,10 @@ def main():
 
     # Deaths, errors, scoring
     death_count = count(cfg.diagnostics.death_patterns)
-    cant_see = count_cs("can't see any such thing")
-    cant_go = count_cs("can't go that way")
-    not_possible = count("that.s not something you can|I only understood")
+    unknown_pat, exit_pat, other_pat = cfg.diagnostics.errors_for(args.alt)
+    cant_see = count(unknown_pat)
+    cant_go = count(exit_pat)
+    not_possible = count(other_pat)
     score_ups = count_cs("score has just gone up")
     score_downs = count_cs("score has just gone down")
 
