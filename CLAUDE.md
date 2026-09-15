@@ -70,3 +70,5 @@ python C:/code/ifhub/tools/ship.py <game> --local   # register only, for a local
 ```
 
 Contract and details: `C:\code\ifhub\docs\publishing.md`. Skills for player debugging and Git Bash pitfalls are in `.claude/skills/`.
+
+**Where a change belongs.** A game owns how it plays; the hub owns how it ships. Story, tests, engine version, and this folder's own docs are the game's business. Anything that would force more than one game repo to move — a new `ifhub.conf` key, a new source extension, what the hub renders, what `ship.py` or `publish.py` write into a game folder — is a hub decision: ticket it in `Johnesco/ifhub` and do not change the contract from here. See "Who decides what" in `C:\code\ifhub\docs\sdlc.md`.
