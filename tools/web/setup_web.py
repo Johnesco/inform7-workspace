@@ -18,6 +18,7 @@ The game binary and Parchment libraries are always updated.
 
 import argparse
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -69,6 +70,12 @@ def main():
     if args.mood:
         print("Copying mood-engine.js...")
         web.copy_mood_engine(parchment_dir)
+        # The mood template links mood.css at the game root; seed one for a new
+        # project so the overlay is a file the hub can show. Never overwrite.
+        mood_css = out_dir / "mood.css"
+        if not mood_css.exists():
+            print("Seeding mood.css from the mood template...")
+            shutil.copy2(str(script_dir / "templates" / "mood.css"), str(mood_css))
 
     # Base64-encode game binary
     print(f"Encoding {game_basename} -> {story_js}...")
