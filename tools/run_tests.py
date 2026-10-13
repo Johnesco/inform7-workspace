@@ -508,6 +508,11 @@ def run_scenario(name, tests, cfg, seed, scenarios_dir):
     assertion_results = {"total": 0, "passed": 0, "failed": 0, "failures": [],
                          "details": []}
     aborted = False
+    # Where the run got to, so an interpreter error can be reported precisely
+    # and the checks it never reached counted rather than silently dropped.
+    completed = -1          # last command index whose checks were evaluated
+    current = (0, "(preamble)")
+    error = None
 
     try:
         # Read preamble (banner + initial room)
@@ -518,9 +523,11 @@ def run_scenario(name, tests, cfg, seed, scenarios_dir):
         for check_text in checks_by_cmd.get(0, []):
             _eval_and_record(check_text, preamble.split("\n"),
                              assertion_results, 0, command="(preamble)")
+        completed = 0
 
         # Send commands one at a time
         for i, command in enumerate(commands, 1):
+            current = (i, command)
             send_command(proc, command)
             response = read_output()
 
@@ -542,6 +549,7 @@ def run_scenario(name, tests, cfg, seed, scenarios_dir):
                     break
             if aborted:
                 break
+            completed = i
 
         # Send score command if not already at end
         if not aborted and not any(c.strip() == "score" for c in commands[-5:]):
@@ -552,6 +560,7 @@ def run_scenario(name, tests, cfg, seed, scenarios_dir):
 
     except (TimeoutError, OSError) as e:
         transcript_parts.append(f"\n[ERROR: {e}]")
+        error = e
     finally:
         # Close stdin to signal EOF — interpreter exits cleanly
         try:
@@ -583,8 +592,31 @@ def run_scenario(name, tests, cfg, seed, scenarios_dir):
     # Aggregate diagnostics
     diag = diagnose_transcript(transcript, cfg)
 
+    # An interpreter error means the scenario did not finish. Every check it
+    # never reached counts as failed: dropping them would shrink the total and
+    # let an unfinished run report "0 failed" (inform7-workspace#4).
+    detail = ""
+    if error is not None:
+        at_idx, at_cmd = current
+        detail = f"{error} at command {at_idx} ({at_cmd!r})"
+        for cmd_idx, check_text in checks:
+            if cmd_idx <= completed:
+                continue
+            _, kind = evaluate_check(check_text, [])
+            if kind in ("vital-modifier", "status-skipped"):
+                continue
+            assertion_results["total"] += 1
+            assertion_results["failed"] += 1
+            assertion_results["failures"].append(
+                f"cmd {cmd_idx}: not run ({detail})")
+            assertion_results["details"].append({
+                "check": check_text, "command": "", "cmd_idx": cmd_idx,
+                "passed": False, "response": "", "not_run": True})
+
     # Determine status — ignore returncode from terminate/kill
-    if aborted:
+    if error is not None:
+        status = "fail"
+    elif aborted:
         status = "fail"
     elif assertion_results["failed"] > 0:
         status = "fail"
@@ -601,6 +633,7 @@ def run_scenario(name, tests, cfg, seed, scenarios_dir):
         "transcript_file": str(transcript_path),
         "commands_file": str(commands_path),
         "assertions": assertion_results,
+        **({"detail": detail} if detail else {}),
         **diag,
     }
 
@@ -751,7 +784,9 @@ def build_index_from_regtest(tests):
 
 def format_result_line(r):
     """Format a single scenario result for terminal display."""
-    if r.get("win"):
+    if r.get("status") != "pass":
+        status = "FAIL"
+    elif r.get("win"):
         status = "WIN"
     elif r.get("status") == "pass":
         status = "PASS"
@@ -771,6 +806,8 @@ def format_result_line(r):
     if r.get("errors"):
         parts.append(f"errors={r['errors']}")
     parts.append(f"({r.get('transcript_lines', 0)} lines)")
+    if r.get("status") != "pass" and r.get("detail"):
+        parts.append(f"-- {r['detail']}")
 
     return " ".join(parts)
 
